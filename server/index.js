@@ -362,7 +362,8 @@ app.post('/api/institution/setup', (req, res) => {
     deptName,
     deptCode,
     deptBuilding,
-    hodName
+    hodName,
+    hodEmail
   } = req.body;
 
   if (!collegeName || !adminName || !adminEmail || !adminPassword) {
