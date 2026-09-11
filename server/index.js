@@ -31,13 +31,24 @@ app.use(cors());
 // Increase JSON limit to handle base64 image uploads
 app.use(express.json({ limit: '10mb' }));
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Vercel has a read-only filesystem — use /tmp for uploads, local __dirname otherwise
+const isVercel = !!process.env.VERCEL;
+const uploadsDir = isVercel
+  ? path.join('/tmp', 'uploads', 'profiles')
+  : path.join(__dirname, 'uploads', 'profiles');
+
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[INTERFORM] Could not create uploads dir:', e.message);
 }
-// Serve static uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve static uploads (local dev only — Vercel doesn't persist /tmp across requests)
+if (!isVercel) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 
 // In-Memory Data Engine (Dual Mode Fallback)
 let inMemoryData = {

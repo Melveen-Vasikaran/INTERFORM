@@ -5,17 +5,14 @@
   "installCommand": "npm install",
   "framework": null,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/api/:path*", "destination": "/api/index.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/index.js": {
       "memory": 512,
-      "maxDuration": 30
+      "maxDuration": 30,
+      "includeFiles": "server/**"
     }
-  },
-  "env": {
-    "NODE_ENV": "production",
-    "JWT_SECRET": "interform_sunlit_gallery_jwt_secret_2026"
   }
 }
