@@ -50,6 +50,7 @@ let inMemoryData = {
   notifications: [...seedNotifications],
   maintenance: [...seedMaintenance],
   invitations: [],
+  auditLogs: [],
   settings: { ...seedSettings }
 };
 
@@ -245,8 +246,8 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials. User not found.' });
   }
 
-  if (!user.isActive) {
-    return res.status(403).json({ message: 'Your account is deactivated. Contact Administrator.' });
+  if (user.isActive === false) {
+    return res.status(403).json({ message: 'Your account has been deactivated. Please contact your administrator.' });
   }
 
   const passwordMatch = bcrypt.compareSync(password, user.password) || password === 'password123';
@@ -254,7 +255,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials. Incorrect password.' });
   }
 
-  // Generate JWT Token
+  // Generate JWT Token — includes departmentId for strict isolation
   const tokenPayload = {
     id: user.id,
     name: user.name,
@@ -262,8 +263,13 @@ app.post('/api/auth/login', (req, res) => {
     collegeId: user.collegeId,
     role: user.role,
     department: user.department,
-    studentYear: user.studentYear,
-    designation: user.designation
+    departmentId: user.departmentId || null,
+    studentYear: user.studentYear || null,
+    section: user.section || null,
+    registerNumber: user.registerNumber || null,
+    staffId: user.staffId || null,
+    designation: user.designation || null,
+    profilePhotoUrl: user.profilePhotoUrl || null
   };
 
   const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
@@ -502,6 +508,7 @@ app.post('/api/institution/reset-demo', (req, res) => {
     notifications: [...seedNotifications],
     maintenance: [...seedMaintenance],
     invitations: [],
+    auditLogs: [],
     settings: { ...seedSettings }
   };
   res.json({ message: 'Demo seed data restored successfully.' });
@@ -1099,8 +1106,288 @@ app.put('/api/departments/:id', authenticateToken, authorizeRoles('admin'), (req
 
 // USERS APIs (Admin Management & Profile)
 app.get('/api/users', authenticateToken, authorizeRoles('admin', 'hod'), (req, res) => {
-  const safeUsers = inMemoryData.users.map(({ password, ...u }) => u);
-  res.json(safeUsers);
+  const { role: roleFilter, dept: deptFilter, status: statusFilter } = req.query;
+
+  let users = inMemoryData.users.map(({ password, ...u }) => u);
+
+  // HOD: can only see users in their own department
+  if (req.user.role === 'hod') {
+    users = users.filter(u => u.departmentId === req.user.departmentId || u.department === req.user.department);
+  }
+
+  // Apply optional filters (admin can filter by role/dept/status)
+  if (roleFilter && roleFilter !== 'all') {
+    users = users.filter(u => u.role === roleFilter);
+  }
+  if (deptFilter && deptFilter !== 'all') {
+    users = users.filter(u => u.departmentId === deptFilter || u.department === deptFilter);
+  }
+  if (statusFilter === 'active') {
+    users = users.filter(u => u.isActive !== false);
+  } else if (statusFilter === 'inactive') {
+    users = users.filter(u => u.isActive === false);
+  }
+
+  res.json(users);
+});
+
+// CREATE HOD (Admin only — direct password creation, no invitation needed)
+app.post('/api/users/create-hod', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+  const { name, email, department, departmentId, password, profilePhotoUrl } = req.body;
+
+  if (!name || !email || !department || !password) {
+    return res.status(400).json({ message: 'Name, email, department and password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  }
+
+  // Validate email uniqueness
+  const existingEmail = inMemoryData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (existingEmail) {
+    return res.status(400).json({ message: 'This email is already registered to another account.' });
+  }
+
+  // Validate: department must not already have an active HOD
+  const deptId = departmentId || department;
+  const existingHod = inMemoryData.users.find(u =>
+    u.role === 'hod' &&
+    u.isActive !== false &&
+    (u.departmentId === deptId || u.department === department)
+  );
+  if (existingHod) {
+    return res.status(400).json({ message: `Department "${department}" already has an active HOD (${existingHod.name}). Deactivate them first.` });
+  }
+
+  // Look up department object
+  const deptObj = inMemoryData.departments.find(d => d.id === departmentId || d.name === department);
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const ts = Date.now();
+  const newHod = {
+    id: `usr-hod-${ts}`,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    collegeId: `HOD-${(deptObj?.code || 'DEPT').toUpperCase()}-${ts.toString().slice(-4)}`,
+    password: hashedPassword,
+    role: 'hod',
+    department: deptObj ? deptObj.name : department,
+    departmentId: deptObj ? deptObj.id : (departmentId || `dept-${ts}`),
+    designation: 'Head of Department',
+    profilePhotoUrl: profilePhotoUrl || null,
+    isActive: true,
+    createdBy: req.user.id,
+    createdAt: new Date().toISOString()
+  };
+
+  // Update department's hodName
+  if (deptObj) {
+    const deptIdx = inMemoryData.departments.findIndex(d => d.id === deptObj.id);
+    if (deptIdx !== -1) {
+      inMemoryData.departments[deptIdx].hodName = name.trim();
+      inMemoryData.departments[deptIdx].hodId = newHod.id;
+    }
+  }
+
+  inMemoryData.users.push(newHod);
+
+  // Audit log
+  inMemoryData.auditLogs.unshift({
+    id: `log-${ts}`,
+    actor: req.user.name,
+    actorId: req.user.id,
+    action: 'CREATE_HOD',
+    target: name,
+    targetId: newHod.id,
+    department: newHod.department,
+    details: `Admin "${req.user.name}" created HOD account for "${name}" in "${newHod.department}"`,
+    timestamp: new Date().toISOString()
+  });
+
+  const { password: _pw, ...safeHod } = newHod;
+  res.status(201).json({ message: `HOD account created successfully for ${name}.`, user: safeHod });
+});
+
+// CREATE STAFF (HOD only — dept auto-assigned from HOD's department)
+app.post('/api/users/create-staff', authenticateToken, authorizeRoles('hod', 'admin'), async (req, res) => {
+  const { name, email, staffId, password, designation, phone, profilePhotoUrl } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Name, email and password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  }
+
+  // Email uniqueness
+  const existingEmail = inMemoryData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (existingEmail) {
+    return res.status(400).json({ message: 'This email is already registered to another account.' });
+  }
+
+  // Staff ID uniqueness
+  const generatedStaffId = staffId || `STF-${Date.now().toString().slice(-6)}`;
+  if (staffId) {
+    const existingStaffId = inMemoryData.users.find(u => u.staffId === staffId);
+    if (existingStaffId) {
+      return res.status(400).json({ message: 'This Staff ID is already assigned to another account.' });
+    }
+  }
+
+  const ts = Date.now();
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const newStaff = {
+    id: `usr-staff-${ts}`,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    collegeId: generatedStaffId,
+    staffId: generatedStaffId,
+    password: hashedPassword,
+    role: 'staff',
+    // Automatically inherit HOD's department — not user-selectable
+    department: req.user.department,
+    departmentId: req.user.departmentId,
+    designation: designation || 'Assistant Professor',
+    phone: phone || '',
+    profilePhotoUrl: profilePhotoUrl || null,
+    isActive: true,
+    createdBy: req.user.id,
+    createdAt: new Date().toISOString()
+  };
+
+  inMemoryData.users.push(newStaff);
+
+  // Audit log
+  inMemoryData.auditLogs.unshift({
+    id: `log-${ts}`,
+    actor: req.user.name,
+    actorId: req.user.id,
+    action: 'CREATE_STAFF',
+    target: name,
+    targetId: newStaff.id,
+    department: newStaff.department,
+    details: `HOD "${req.user.name}" created Staff account for "${name}" in "${newStaff.department}"`,
+    timestamp: new Date().toISOString()
+  });
+
+  const { password: _pw, ...safeStaff } = newStaff;
+  res.status(201).json({ message: `Staff account created successfully for ${name}.`, user: safeStaff });
+});
+
+// CREATE STUDENT (HOD only — dept auto-assigned from HOD's department)
+app.post('/api/users/create-student', authenticateToken, authorizeRoles('hod', 'admin'), async (req, res) => {
+  const { name, email, registerNumber, password, year, section, phone, profilePhotoUrl } = req.body;
+
+  if (!name || !email || !registerNumber || !password) {
+    return res.status(400).json({ message: 'Name, email, register number and password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  }
+
+  // Email uniqueness
+  const existingEmail = inMemoryData.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (existingEmail) {
+    return res.status(400).json({ message: 'This email is already registered to another account.' });
+  }
+
+  // Register number uniqueness
+  const existingReg = inMemoryData.users.find(u => u.registerNumber === registerNumber.trim());
+  if (existingReg) {
+    return res.status(400).json({ message: 'This register number is already assigned to another student.' });
+  }
+
+  const ts = Date.now();
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const newStudent = {
+    id: `usr-stu-${ts}`,
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    collegeId: registerNumber.trim().toUpperCase(),
+    registerNumber: registerNumber.trim().toUpperCase(),
+    password: hashedPassword,
+    role: 'student',
+    // Automatically inherit HOD's department
+    department: req.user.department,
+    departmentId: req.user.departmentId,
+    studentYear: year || '1',
+    section: section || 'A',
+    designation: 'Student',
+    phone: phone || '',
+    profilePhotoUrl: profilePhotoUrl || null,
+    isActive: true,
+    createdBy: req.user.id,
+    createdAt: new Date().toISOString()
+  };
+
+  inMemoryData.users.push(newStudent);
+
+  // Audit log
+  inMemoryData.auditLogs.unshift({
+    id: `log-${ts}`,
+    actor: req.user.name,
+    actorId: req.user.id,
+    action: 'CREATE_STUDENT',
+    target: name,
+    targetId: newStudent.id,
+    department: newStudent.department,
+    details: `HOD "${req.user.name}" created Student account for "${name}" (Reg: ${registerNumber}) in "${newStudent.department}"`,
+    timestamp: new Date().toISOString()
+  });
+
+  const { password: _pw, ...safeStudent } = newStudent;
+  res.status(201).json({ message: `Student account created successfully for ${name}.`, user: safeStudent });
+});
+
+// TOGGLE USER STATUS (Admin: any user; HOD: only staff/students in own dept)
+app.patch('/api/users/:id/status', authenticateToken, authorizeRoles('admin', 'hod'), (req, res) => {
+  const userIdx = inMemoryData.users.findIndex(u => u.id === req.params.id);
+  if (userIdx === -1) return res.status(404).json({ message: 'User not found.' });
+
+  const targetUser = inMemoryData.users[userIdx];
+
+  // HOD can only deactivate staff/students in their own department
+  if (req.user.role === 'hod') {
+    if (targetUser.departmentId !== req.user.departmentId && targetUser.department !== req.user.department) {
+      return res.status(403).json({ message: 'You can only manage users in your own department.' });
+    }
+    if (targetUser.role === 'admin' || targetUser.role === 'hod') {
+      return res.status(403).json({ message: 'HOD cannot deactivate Admin or another HOD account.' });
+    }
+  }
+
+  const newStatus = targetUser.isActive === false ? true : false;
+  inMemoryData.users[userIdx].isActive = newStatus;
+  inMemoryData.users[userIdx].updatedAt = new Date().toISOString();
+
+  const action = newStatus ? 'ACTIVATED' : 'DEACTIVATED';
+  const ts = Date.now();
+  inMemoryData.auditLogs.unshift({
+    id: `log-${ts}`,
+    actor: req.user.name,
+    actorId: req.user.id,
+    action: `USER_${action}`,
+    target: targetUser.name,
+    targetId: targetUser.id,
+    department: targetUser.department,
+    details: `"${req.user.name}" ${action.toLowerCase()} the account of "${targetUser.name}" (${targetUser.role}) in "${targetUser.department}"`,
+    timestamp: new Date().toISOString()
+  });
+
+  const { password, ...safeUser } = inMemoryData.users[userIdx];
+  res.json({ message: `Account ${newStatus ? 'activated' : 'deactivated'} successfully.`, user: safeUser });
+});
+
+// AUDIT LOGS (Admin only)
+app.get('/api/audit-logs', authenticateToken, authorizeRoles('admin', 'hod'), (req, res) => {
+  let logs = inMemoryData.auditLogs || [];
+
+  // HOD sees only their department's audit logs
+  if (req.user.role === 'hod') {
+    logs = logs.filter(l => l.department === req.user.department);
+  }
+
+  res.json(logs.slice(0, 100)); // return last 100
 });
 
 // Upload profile photo

@@ -77,7 +77,7 @@ export const markAllNotificationsRead = () => request('/notifications/read-all',
 export const fetchDepartments = () => request('/departments');
 export const createDepartment = (data) => request('/departments', { method: 'POST', body: JSON.stringify(data) });
 export const updateDepartment = (id, data) => request(`/departments/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const fetchUsers = () => request('/users');
+export const fetchUsers = (params = '') => request(`/users${params ? '?' + params : ''}`);
 export const updateUser = (id, data) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const uploadProfilePhoto = (imageBase64) => request('/users/profile-photo', { method: 'POST', body: JSON.stringify({ imageBase64 }) });
 export const removeProfilePhoto = () => request('/users/profile-photo', { method: 'DELETE' });
@@ -86,6 +86,13 @@ export const fetchSettings = () => request('/settings');
 export const updateSettings = (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) });
 export const setupInstitution = (data) => request('/institution/setup', { method: 'POST', body: JSON.stringify(data) });
 export const resetDemoData = () => request('/institution/reset-demo', { method: 'POST' });
+
+// User management APIs
+export const createHod = (data) => request('/users/create-hod', { method: 'POST', body: JSON.stringify(data) });
+export const createStaff = (data) => request('/users/create-staff', { method: 'POST', body: JSON.stringify(data) });
+export const createStudent = (data) => request('/users/create-student', { method: 'POST', body: JSON.stringify(data) });
+export const toggleUserStatus = (id) => request(`/users/${id}/status`, { method: 'PATCH' });
+export const fetchAuditLogs = () => request('/audit-logs');
 
 // Invitations APIs
 export const fetchInvitations = () => request('/invitations');

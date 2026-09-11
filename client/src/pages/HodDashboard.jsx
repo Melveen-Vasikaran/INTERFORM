@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { fetchResources, fetchRequests, fetchBookings, fetchEvents, approveRequest, rejectRequest } from '../utils/api';
-import { Inbox, Building2, Clock, Calendar, CheckCircle2, XCircle, ArrowRight, Plus } from 'lucide-react';
+import { fetchResources, fetchRequests, fetchBookings, fetchEvents, approveRequest, rejectRequest, fetchUsers } from '../utils/api';
+import { Inbox, Building2, Clock, Calendar, CheckCircle2, XCircle, ArrowRight, Plus, Users, GraduationCap } from 'lucide-react';
 import RejectionReasonModal from '../components/RejectionReasonModal';
 import Avatar from '../components/Avatar';
 import AddResourceModal from '../components/AddResourceModal';
@@ -12,7 +12,9 @@ export default function HodDashboard({ onNavigate }) {
     deptResourcesCount: 0,
     pendingRequestsCount: 0,
     todaysBookingsCount: 0,
-    upcomingEventsCount: 0
+    upcomingEventsCount: 0,
+    staffCount: 0,
+    studentCount: 0
   });
 
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -22,11 +24,12 @@ export default function HodDashboard({ onNavigate }) {
 
   const loadHodData = async () => {
     try {
-      const [resList, reqList, bkList, evtList] = await Promise.all([
+      const [resList, reqList, bkList, evtList, userList] = await Promise.all([
         fetchResources(),
         fetchRequests(),
         fetchBookings(),
-        fetchEvents()
+        fetchEvents(),
+        fetchUsers()
       ]);
 
       const deptName = user?.department || 'Computer Science';
@@ -35,12 +38,16 @@ export default function HodDashboard({ onNavigate }) {
       const pending = reqList.filter(r => r.status === 'Pending');
       const todayBk = bkList.filter(b => b.status === 'Upcoming' || b.status === 'Active');
       const deptEvts = evtList.filter(e => e.department === deptName);
+      const staffCount = userList.filter(u => u.role === 'staff').length;
+      const studentCount = userList.filter(u => u.role === 'student').length;
 
       setStats({
         deptResourcesCount: deptRes.length,
         pendingRequestsCount: pending.length,
         todaysBookingsCount: todayBk.length,
-        upcomingEventsCount: deptEvts.length
+        upcomingEventsCount: deptEvts.length,
+        staffCount,
+        studentCount
       });
 
       setPendingRequests(pending);
@@ -48,6 +55,7 @@ export default function HodDashboard({ onNavigate }) {
       console.error(err);
     }
   };
+
 
   useEffect(() => {
     loadHodData();
@@ -96,72 +104,58 @@ export default function HodDashboard({ onNavigate }) {
       </div>
 
       {/* Interactive Overview Metric Cards */}
-      <div className="grid-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
         {/* Department Resources -> Resource Explorer */}
-        <div
-          className="sunlit-card"
-          onClick={() => onNavigate('resources')}
-          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-          title="Click to view Department Resources"
-        >
+        <div className="sunlit-card" onClick={() => onNavigate('resources')} style={{ cursor: 'pointer' }} title="View Resources">
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>DEPARTMENT RESOURCES</span>
-            <ArrowRight size={14} color="var(--accent-blue)" />
+            <span>DEPT RESOURCES</span><ArrowRight size={14} color="var(--accent-blue)" />
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent-blue)', margin: '0.2rem 0' }}>
-            {stats.deptResourcesCount}
-          </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Owned facilities & gear</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent-blue)', margin: '0.2rem 0' }}>{stats.deptResourcesCount}</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Facilities & gear</div>
         </div>
 
-        {/* Pending Requests -> Incoming Requests Page */}
-        <div
-          className="sunlit-card"
-          onClick={() => onNavigate('incoming')}
-          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-          title="Click to review Pending Requests"
-        >
+        {/* Staff Members */}
+        <div className="sunlit-card" onClick={() => onNavigate('hod-users')} style={{ cursor: 'pointer' }} title="Manage Staff">
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>PENDING REQUESTS</span>
-            <ArrowRight size={14} color="var(--status-reserved-text)" />
+            <span>STAFF MEMBERS</span><ArrowRight size={14} color="#92400e" />
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--status-reserved-text)', margin: '0.2rem 0' }}>
-            {stats.pendingRequestsCount}
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#92400e', margin: '0.2rem 0' }}>{stats.staffCount}</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>In your department</div>
+        </div>
+
+        {/* Students */}
+        <div className="sunlit-card" onClick={() => onNavigate('hod-users')} style={{ cursor: 'pointer' }} title="Manage Students">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>STUDENTS</span><ArrowRight size={14} color="#7e22ce" />
           </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#7e22ce', margin: '0.2rem 0' }}>{stats.studentCount}</div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Enrolled students</div>
+        </div>
+
+        {/* Pending Requests */}
+        <div className="sunlit-card" onClick={() => onNavigate('incoming')} style={{ cursor: 'pointer' }} title="Review Requests">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>PENDING REQUESTS</span><ArrowRight size={14} color="var(--status-reserved-text)" />
+          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--status-reserved-text)', margin: '0.2rem 0' }}>{stats.pendingRequestsCount}</div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Awaiting your decision</div>
         </div>
 
-        {/* Today's Bookings -> Bookings Log */}
-        <div
-          className="sunlit-card"
-          onClick={() => onNavigate('bookings')}
-          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-          title="Click to view Bookings Log"
-        >
+        {/* Today's Bookings */}
+        <div className="sunlit-card" onClick={() => onNavigate('bookings')} style={{ cursor: 'pointer' }} title="View Bookings">
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>TODAY'S BOOKINGS</span>
-            <ArrowRight size={14} color="var(--status-available-text)" />
+            <span>TODAY'S BOOKINGS</span><ArrowRight size={14} color="var(--status-available-text)" />
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--status-available-text)', margin: '0.2rem 0' }}>
-            {stats.todaysBookingsCount}
-          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--status-available-text)', margin: '0.2rem 0' }}>{stats.todaysBookingsCount}</div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Scheduled reservations</div>
         </div>
 
-        {/* Upcoming Events -> Department Events */}
-        <div
-          className="sunlit-card"
-          onClick={() => onNavigate('events')}
-          style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
-          title="Click to view Department Events"
-        >
+        {/* Upcoming Events */}
+        <div className="sunlit-card" onClick={() => onNavigate('events')} style={{ cursor: 'pointer' }} title="View Events">
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>UPCOMING EVENTS</span>
-            <ArrowRight size={14} color="var(--text-primary)" />
+            <span>UPCOMING EVENTS</span><ArrowRight size={14} color="var(--text-primary)" />
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
-            {stats.upcomingEventsCount}
-          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.2rem 0' }}>{stats.upcomingEventsCount}</div>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Department seminars</div>
         </div>
       </div>

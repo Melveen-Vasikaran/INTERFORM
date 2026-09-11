@@ -12,7 +12,10 @@ import {
   BarChart3, 
   Settings as SettingsIcon,
   User,
-  Inbox
+  Inbox,
+  UserCheck,
+  ShieldCheck,
+  GraduationCap
 } from 'lucide-react';
 import Avatar from './Avatar';
 
@@ -25,7 +28,7 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
         return [
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { id: 'departments', label: 'Departments', icon: Building2 },
-          { id: 'users', label: 'Users & Roles', icon: Users },
+          { id: 'users', label: 'User Management', icon: Users },
           { id: 'resources', label: 'Resources Explorer', icon: Search },
           { id: 'requests', label: 'All Requests', icon: FileCheck },
           { id: 'bookings', label: 'All Bookings', icon: Clock },
@@ -37,6 +40,7 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
       case 'hod':
         return [
           { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { id: 'hod-users', label: 'Staff & Students', icon: Users },
           { id: 'department', label: 'My Department', icon: Building2 },
           { id: 'resources', label: 'Resource Catalog', icon: Search },
           { id: 'incoming', label: 'Incoming Requests', icon: Inbox },

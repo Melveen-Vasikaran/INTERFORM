@@ -11,8 +11,10 @@ const seedUsers = [
     password: defaultPasswordHash,
     role: 'admin',
     department: 'Campus Administration',
+    departmentId: 'dept-admin',
     designation: 'Chief Administrator',
-    isActive: true
+    isActive: true,
+    createdAt: new Date().toISOString()
   },
   {
     id: 'usr-hod-cs',
@@ -22,8 +24,10 @@ const seedUsers = [
     password: defaultPasswordHash,
     role: 'hod',
     department: 'Computer Science',
+    departmentId: 'dept-cs',
     designation: 'Head of Department',
-    isActive: true
+    isActive: true,
+    createdAt: new Date().toISOString()
   },
   {
     id: 'usr-hod-mech',
@@ -33,43 +37,62 @@ const seedUsers = [
     password: defaultPasswordHash,
     role: 'hod',
     department: 'Mechanical Engineering',
+    departmentId: 'dept-mech',
     designation: 'Head of Department',
-    isActive: true
+    isActive: true,
+    createdAt: new Date().toISOString()
   },
   {
     id: 'usr-staff-1',
     name: 'Marcus Brody',
     email: 'marcus.brody@college.edu',
     collegeId: 'STF-5012',
+    staffId: 'STF-5012',
     password: defaultPasswordHash,
     role: 'staff',
     department: 'Computer Science',
+    departmentId: 'dept-cs',
     designation: 'Lab Instructor',
-    isActive: true
+    phone: '',
+    createdBy: 'usr-hod-cs',
+    isActive: true,
+    createdAt: new Date().toISOString()
   },
   {
     id: 'usr-student-1',
     name: 'Sophia Chen',
     email: 'sophia.chen@student.college.edu',
     collegeId: 'STU-2024-089',
+    registerNumber: 'CS2024089',
     password: defaultPasswordHash,
     role: 'student',
     department: 'Computer Science',
-    studentYear: '3rd Year',
-    designation: 'Student Lead',
-    isActive: true
+    departmentId: 'dept-cs',
+    studentYear: '3',
+    section: 'A',
+    designation: 'Student',
+    phone: '',
+    createdBy: 'usr-hod-cs',
+    isActive: true,
+    createdAt: new Date().toISOString()
   },
   {
     id: 'usr-student-2',
     name: 'Liam Gallagher',
     email: 'liam.g@student.college.edu',
     collegeId: 'STU-2024-114',
+    registerNumber: 'ME2024114',
     password: defaultPasswordHash,
     role: 'student',
     department: 'Mechanical Engineering',
-    studentYear: '4th Year',
-    designation: 'Project Lead',
-    isActive: true
+    departmentId: 'dept-mech',
+    studentYear: '4',
+    section: 'B',
+    designation: 'Student',
+    phone: '',
+    createdBy: 'usr-hod-mech',
+    isActive: true,
+    createdAt: new Date().toISOString()
   }
 ];
 

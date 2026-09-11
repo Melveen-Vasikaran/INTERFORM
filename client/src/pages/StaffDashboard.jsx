@@ -36,9 +36,9 @@ export default function StaffDashboard({ onNavigate }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Banner */}
       <div className="sunlit-card" style={{ background: 'var(--accent-blue-light)', border: '1px solid var(--accent-blue-border)', padding: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
           <Avatar user={user} size="lg" />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase' }}>
               STAFF / INSTRUCTOR DASHBOARD
             </div>
@@ -46,8 +46,23 @@ export default function StaffDashboard({ onNavigate }) {
               Good Morning, {user?.name || 'Staff Member'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.2rem' }}>
-              Department: <strong>{user?.department || 'Computer Science'}</strong> • {user?.designation || 'Faculty Instructor'}
+              Department: <strong>{user?.department || 'Computer Science'}</strong>
             </p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+              {(user?.staffId || user?.collegeId) && (
+                <span style={{ padding: '0.2rem 0.65rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                  ID: {user.staffId || user.collegeId}
+                </span>
+              )}
+              {user?.designation && (
+                <span style={{ padding: '0.2rem 0.65rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  {user.designation}
+                </span>
+              )}
+              <span style={{ padding: '0.2rem 0.65rem', background: '#fefce8', border: '1px solid #fde68a', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>
+                STAFF
+              </span>
+            </div>
           </div>
         </div>
       </div>

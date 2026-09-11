@@ -70,9 +70,9 @@ export default function StudentDashboard({ onNavigate }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       {/* Greeting Banner */}
       <div className="sunlit-card" style={{ background: 'var(--accent-blue-light)', border: '1px solid var(--accent-blue-border)', padding: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
           <Avatar user={user} size="lg" />
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               STUDENT DASHBOARD
             </div>
@@ -80,8 +80,29 @@ export default function StudentDashboard({ onNavigate }) {
               Good Morning, {user?.name || 'Student'}
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.2rem' }}>
-              Department: <strong>{user?.department || 'Computer Science'}</strong> • {user?.studentYear || '3rd Year'}
+              Department: <strong>{user?.department || 'Computer Science'}</strong>
             </p>
+            {/* Student-specific identity tags */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+              {user?.registerNumber && (
+                <span style={{ padding: '0.2rem 0.65rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                  Reg: {user.registerNumber}
+                </span>
+              )}
+              {user?.studentYear && (
+                <span style={{ padding: '0.2rem 0.65rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  Year {user.studentYear}
+                </span>
+              )}
+              {user?.section && (
+                <span style={{ padding: '0.2rem 0.65rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                  Section {user.section}
+                </span>
+              )}
+              <span style={{ padding: '0.2rem 0.65rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '99px', fontSize: '0.72rem', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase' }}>
+                STUDENT
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -6,13 +6,12 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import OnboardingWizard from './pages/OnboardingWizard';
 
-
 import StudentDashboard from './pages/StudentDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import HodDashboard from './pages/HodDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AcceptInvitation from './pages/AcceptInvitation';
-
+import HodUserManagementPage from './pages/HodUserManagementPage';
 
 import ResourceExplorerPage from './pages/ResourceExplorerPage';
 import CampusPlannerPage from './pages/CampusPlannerPage';
@@ -125,6 +124,9 @@ function MainApp() {
         return <AdminManagementPage initialTab="departments" />;
       case 'users':
         return <AdminManagementPage initialTab="users" />;
+      case 'hod-users':
+        // HOD-only: Staff & Students management page
+        return role === 'hod' || role === 'admin' ? <HodUserManagementPage /> : renderDashboardByRole();
       case 'analytics':
         return <AdminDashboard onNavigate={handleNavigate} />;
       case 'settings':
