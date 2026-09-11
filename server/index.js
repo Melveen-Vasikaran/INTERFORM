@@ -1715,11 +1715,16 @@ app.put('/api/settings', authenticateToken, authorizeRoles('admin'), (req, res) 
   res.json({ message: 'System settings updated.', settings: inMemoryData.settings });
 });
 
-// START SERVER
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`INTERFORM REST API Server running on port ${PORT}`);
-  console.log(`Mode: ${getMongoStatus() ? 'MongoDB' : 'In-Memory Enterprise Engine'}`);
-  console.log(`Tagline: Connect. Share. Plan.`);
-  console.log(`====================================================`);
-});
+// START SERVER (local dev) — Vercel uses module.exports instead of listen
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`INTERFORM REST API Server running on port ${PORT}`);
+    console.log(`Mode: ${getMongoStatus() ? 'MongoDB' : 'In-Memory Enterprise Engine'}`);
+    console.log(`Tagline: Connect. Share. Plan.`);
+    console.log(`====================================================`);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
